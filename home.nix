@@ -1,7 +1,10 @@
 { pkgs, ...}: 
 
 {
-
+  imports = [
+    ./dotfiles/starship.nix
+    ./dotfiles/jellyfin.nix
+  ];
   home.stateVersion = "25.11";
 
 
@@ -30,14 +33,20 @@
     enableCompletion = true;
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
-
     history.size = 10000;
-
-
-    oh-my-zsh = {
-      enable = true;
-      plugins = [ "git" "thefuck" ];
-      theme = "robbyrussell";
-   };
+      oh-my-zsh = {
+        enable = true;
+        plugins = [ "git" "thefuck" ];
+        theme = "robbyrussell";
+      };
   };
+
+  programs.neovim = { 
+    enable = true;
+    defaultEditor = true;
+    extraConfig = ''
+      set number
+    '';
+  };
+
 }

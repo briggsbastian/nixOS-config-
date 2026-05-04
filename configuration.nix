@@ -39,10 +39,16 @@
   services.xserver.enable = true;
   # Enable the KDE Plasma Desktop Environment.
   services.displayManager.sddm.enable = true;
+  services.desktopManager.plasma6.enable = true;
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "us";
     variant = "";
+  };
+  #Enable Hardware accelaration availability (fixes jellyfin media player)
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true;
   };
   # Enable CUPS to print documents, even though I don't own a printer.
   services.printing.enable = true;
