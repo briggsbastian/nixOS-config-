@@ -6,7 +6,6 @@
 
   environment.systemPackages = with pkgs; [
     #terminal
-    neovim
     tmux
     git
     fish
