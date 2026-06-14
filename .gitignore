@@ -1,0 +1,7 @@
+# Nix build outputs (nix build / nixos-rebuild build)
+result
+result-*
+
+# Claude Code local settings (machine-specific, not shared)
+.claude/settings.local.json
+**/.claude/settings.local.json
