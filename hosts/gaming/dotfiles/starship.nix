@@ -1,10 +1,10 @@
 { config, pkgs, ... }:
 
 {
-  programs.starship = {  
+  programs.starship = {
     enable = true;
     enableZshIntegration = true;
-    settings = { 
+    settings = {
     # Overall prompt format — controls order of modules
     format = ''
       $username$hostname$directory$git_branch$git_status$nix_shell$cmd_duration

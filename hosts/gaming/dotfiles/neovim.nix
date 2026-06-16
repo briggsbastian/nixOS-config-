@@ -1,5 +1,5 @@
 {inputs, pkgs, ...}:
-{ 
+{
   imports = [inputs.nixvim.homeModules.nixvim];
   programs.nixvim = {
     enable = true;
@@ -20,7 +20,7 @@
       colorizer.enable = true;
       # NOTE: camouflage.nvim has no nixvim module, so it is NOT enabled here.
       # It is added via extraPlugins + setup() below instead.
-      lsp = { 
+      lsp = {
         enable = true;
         servers.ols.enable = true;
       };
@@ -48,7 +48,7 @@
         -- options go here; an empty table uses defaults
       })
     '';
-    
+
     extraPackages = [ pkgs.opencode ];
     extraPlugins = [
       (pkgs.vimUtils.buildVimPlugin {

@@ -10,6 +10,7 @@
       ./hardware-configuration.nix
       ./packages.nix
       ./udev.nix
+      ../../modules/internal-ca.nix # trust mgmt's step-ca root so *.mgmt.lan TLS verifies
     ];
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
@@ -21,8 +22,15 @@
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
   # Enable networking
   networking.networkmanager.enable = true;
-  networking.nameservers = ["1.1.1.1" "9.9.9.9"];
+  # Resolve *.mgmt.lan via mgmt's AdGuard (wildcard -> 192.168.1.222); keep a
+  # public resolver as fallback if mgmt is down. Revert to a public-only list if
+  # you'd rather your desktop DNS not pass through AdGuard's filtering.
+  networking.nameservers = ["192.168.1.222" "9.9.9.9"];
   networking.networkmanager.dns = "none";
+
+  # Trust mgmt's private step-ca root (system trust store) so https://*.mgmt.lan
+  # verifies. Firefox needs enterprise roots too (set in packages.nix).
+  alcove.internalCa.enable = true;
 
   time.timeZone = "America/Los_Angeles";
   # Select internationalisation properties.
@@ -43,8 +51,6 @@
   # Enable the KDE Plasma Desktop Environment.
   services.displayManager.sddm.enable = true;
   services.desktopManager.plasma6.enable = true;
-  # Enable Hyprland
-  programs.hyprland.enable = true;
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "us";
@@ -66,9 +72,9 @@
     alsa.support32Bit = true;
     pulse.enable = true;
   };
-  xdg.portal = { 
-    enable = true; 
-    extraPortals = [ pkgs.xdg-desktop-portal-gtk ]; 
+  xdg.portal = {
+    enable = true;
+    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
   };
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
@@ -79,7 +85,7 @@
     shell = pkgs.zsh;
     extraGroups = [ "networkmanager" "wheel" ];
   };
-  services.openssh.enable = true; 
+  services.openssh.enable = true;
   networking.firewall.enable = false;
   system.stateVersion = "25.11"; # Did you read the comment?
   nix.settings.experimental-features = [ "nix-command" "flakes" ];

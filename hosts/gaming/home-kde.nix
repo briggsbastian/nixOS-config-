@@ -1,4 +1,4 @@
-{ pkgs, inputs, ...}: 
+{ pkgs, inputs, ...}:
 
 {
   imports = [
@@ -8,9 +8,11 @@
     ./dotfiles/neovim.nix
     ./dotfiles/alacritty.nix
     ./dotfiles/tmux.nix
-    ./hyprland/waybar/waybar.nix
   ];
   home.stateVersion = "25.11";
   home.username = "briggs";
-  home.packages = [inputs.claude-code.packages.${pkgs.system}.claude-code];
+  home.packages = [
+    inputs.claude-code.packages.${pkgs.system}.claude-code        # coding CLI
+    inputs.claude-desktop.packages.${pkgs.system}.claude-desktop  # GUI chat client
+  ];
 }

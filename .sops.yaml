@@ -1,0 +1,51 @@
+# Who can decrypt what.
+#
+# Every secret file is encrypted to the ADMIN key (so you can edit it from this
+# desktop) PLUS the host(s) that need it at runtime. Host recipients are each
+# box's /etc/ssh/ssh_host_ed25519_key.pub run through `ssh-to-age` — so a host
+# decrypts its own secrets at activation using its SSH host key (no extra key to
+# manage). Add a host here, then list it in the matching creation_rule, and
+# re-key existing shared secrets with `sops updatekeys secrets/<file>.yaml`.
+#
+# NOTE: a host's age identity is derived from its SSH host key. If you ever
+# re-image a box (nixos-anywhere), preserve/inject its host key or re-key these
+# secrets, or it won't be able to decrypt them on first boot.
+keys:
+  - &admin        age16xrzea59hwrrwlccyu924e9ggraz7flgkh3grqpepdf2rhurry8s3hm5df
+  - &host_hacktop age18nmznhp790z2236vdc0mqvv9tgpjydhj3weevtmunl4zp7twuygqdac66e
+  - &host_media   age1a2mja5xrrn62nckuu8d5yjwxuyhmxmr7v0w438ye33neyj4xrcmsz9rwlt
+  - &host_playground   age1gz2uhnzy9e504kwnqs4mzm9x2hrmq7uql4pq8m9aj77l2364kcash88c62
+  - &host_mgmt    age18eq2h82ta0rjyfzhd9d02c6lqun2qtwkqa5mwva76kdeqzlscajqaepyeu
+
+creation_rules:
+  # Per-host secrets: decryptable by you + that one host.
+  - path_regex: secrets/hacktop\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host_hacktop
+  - path_regex: secrets/media\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host_media
+  - path_regex: secrets/playground\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host_playground
+  - path_regex: secrets/mgmt\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host_mgmt
+
+  # Fallback: anything else under secrets/ is shared by you + all hosts.
+  - path_regex: secrets/[^/]+\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host_hacktop
+          - *host_media
+          - *host_playground
+          - *host_mgmt

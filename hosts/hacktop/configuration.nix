@@ -19,14 +19,19 @@
 
   networking.hostName = "hacktop";
 
-  # IMPORTANT: this box is on Wi-Fi only (wlp0s20f3) and NetworkManager owns
-  # that connection. Keep NM enabled or the host drops off the LAN after a
-  # rebuild. The Wi-Fi credentials live in /etc/NetworkManager/system-connections
-  # (root-owned, survives rebuilds) — they are NOT in this repo.
-  # TODO: wire up wired ethernet + a static lease before promoting to CI prod.
+  # Wi-Fi-only again (wlp0s20f3 = 192.168.1.26); Colmena targets .26.
+  #
+  # The USB Ethernet dongle (enp0s13f0u1 = .198) was
+  # UNPLUGGED 2026-06-15: its UniFi switch port wasn't forwarding (link up, TX
+  # only, no ARP reply from the gateway), so it black-holed the default route AND
+  # — being a 2nd NIC on the SAME /24 as Wi-Fi — caused ARP flux that poisoned
+  # .26 and knocked the box offline. Pulling it restored clean Wi-Fi WAN.
+  # TODO (to make wired primary): fix that switch port / try another port+cable,
+  # confirm the dongle pings the gateway AND the internet, set a UniFi DHCP
+  # reservation (the dongle's MAC → .198), then either go WIRED-ONLY (turn Wi-Fi
+  # autoconnect off — this is a server) or add arp_ignore=1/arp_announce=2 so the
+  # two same-subnet NICs don't flux. Until then, do NOT make Ethernet primary.
   networking.networkmanager.enable = true;
-  # Server NIC: don't let the Wi-Fi radio power-save itself into unreachability.
-  networking.networkmanager.wifi.powersave = false;
 
   nixpkgs.config.allowUnfree = true;
 
@@ -63,29 +68,34 @@
     options = "--delete-older-than 30d";
   };
 
-  # --- mgmt Harmonia binary cache (commented until internal-CA trust lands) --
-  # Wire this once the internal-ca module trusts mgmt's root CA, otherwise the
-  # TLS handshake to <cache-host> fails and it needs internal DNS to resolve.
-  # nix.settings = {
-  #   substituters = [ "https://<cache-host>" ];
-  #   trusted-public-keys = [ "<cache-host>-1:<cache-public-key>" ];
-  # };
+  # --- Secrets (sops-nix) ----------------------------------------------------
+  # Smoke-test secret proving the sops-nix → Colmena → /run/secrets pipeline.
+  # Decrypts at activation via this host's SSH host key (see common.nix). The
+  # owner is set to `hacktop` only so it's verifiable without root — real
+  # secrets get their service's user. Replace demo_secret with real ones (CI
+  # runner token, cache signing key, …) as they appear.
+  sops.defaultSopsFile = ../../secrets/hacktop.yaml;
+  sops.secrets.demo_secret = {
+    owner = "hacktop";
+  };
 
-  # --- Treat this as a server, not a laptop ---------------------------------
-  # It lives on a shelf with the lid shut. Never suspend/sleep/hibernate, and
-  # ignore the lid + idle entirely, so it can't drop off the LAN like a laptop.
-  services.logind.settings.Login = {
-    HandleLidSwitch = "ignore";
-    HandleLidSwitchDocked = "ignore";
-    HandleLidSwitchExternalPower = "ignore";
-    IdleAction = "ignore";
+  # --- Wazuh agent (pre-shared-key enrollment) — agent 006 -------------------
+  # client.keys lives in secrets/hacktop.yaml (the defaultSopsFile above),
+  # decrypted at activation via this host's SSH host key. Purely additive — a
+  # new user + service, nothing touching NetworkManager (safe over Wi-Fi).
+  sops.secrets.wazuh_client_keys = {
+    owner = "wazuh";
   };
-  systemd.targets = {
-    sleep.enable = false;
-    suspend.enable = false;
-    hibernate.enable = false;
-    hybrid-sleep.enable = false;
+  alcove.wazuhAgent = {
+    enable = true;
+    clientKeysFile = config.sops.secrets.wazuh_client_keys.path;
   };
+
+  # mgmt's binary cache + root-CA trust now come from modules/internal-ca.nix
+  # (alcove.internalCa.enable, set fleet-wide in common.nix).
+
+  # Server power policy (never suspend, ignore lid, Wi-Fi powersave off) now
+  # lives in modules/common.nix, so every fleet host inherits it.
 
   # --- Desktop (inherited from the installer) -------------------------------
   # Disabled: hacktop is a headless staging/CI box. NetworkManager (above) is
@@ -101,7 +111,7 @@
   # security.rtkit.enable = true;
 
   # Reboot picks up the new kernel; this box should auto-recover headless on
-  # Wi-Fi after a reboot (NetworkManager autoconnect + powersave off above).
+  # Wi-Fi after a reboot (NetworkManager autoconnect + powersave off, in common.nix).
 
   # First install was 25.11 — leave this fixed (it tracks state compat, not
   # package versions).

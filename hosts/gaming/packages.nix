@@ -8,7 +8,6 @@
     #terminal
     tmux
     git
-    fish
     fastfetch
     lsd
     alacritty
@@ -29,7 +28,7 @@
     godot
   ];
 
-  services.flatpak = { 
+  services.flatpak = {
     enable = true;
     remotes = [{ name = "flathub"; location = "https://flathub.org/repo/flathub.flatpakrepo";}];
     packages = [ "com.github.iwalton3.jellyfin-media-player" "me.proton.Mail" "org.DolphinEmu.dolphin-emu" ];
@@ -41,8 +40,13 @@
     binfmt = true;
   };
 
-  programs.firefox.enable = true;
-  
+  programs.firefox = {
+    enable = true;
+    # Firefox keeps its own trust store; import the OS/enterprise roots so it
+    # trusts mgmt's step-ca root (added system-wide via modules/internal-ca.nix).
+    policies.Certificates.ImportEnterpriseRoots = true;
+  };
+
   programs.steam = {
     enable = true;
     remotePlay.openFirewall = true;
@@ -54,7 +58,7 @@
 
   programs.zsh = { enable = true; };
 
-  programs.obs-studio = {  
+  programs.obs-studio = {
     enable = true;
     enableVirtualCamera = true;
   };
