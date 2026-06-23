@@ -22,6 +22,14 @@
       };
       service.DISABLE_REGISTRATION = true;
       session.COOKIE_SECURE = true;
+
+      # Forgejo Actions (CI). Runner lives on hacktop
+      # (hosts/lan/hacktop/forgejo-runner.nix). No built-in actions marketplace,
+      # so resolve `uses: actions/checkout@v4` etc. against github.com.
+      actions = {
+        ENABLED = true;
+        DEFAULT_ACTIONS_URL = "github";
+      };
     };
   };
 

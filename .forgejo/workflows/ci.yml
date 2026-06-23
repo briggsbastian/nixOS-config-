@@ -1,0 +1,60 @@
+# CI for the nix-fleet flake (nixOS-config repo).
+# Runs on the self-hosted Forgejo Actions runner on hacktop
+# (hosts/lan/hacktop/forgejo-runner.nix), which advertises the `nix` label and
+# has Nix + the Harmonia binary cache, so builds are mostly cache hits.
+#
+# NOTE: CI sees only COMMITTED state pushed to Forgejo — not your local
+# uncommitted /etc/nixos working tree. Commit + push for CI to reflect a change.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same ref cancels the older in-flight run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 1. Eval gate: every host config + every flake output must evaluate.
+  flake-check:
+    runs-on: nix
+    steps:
+      - uses: actions/checkout@v4
+      - run: nix --version
+      - name: nix flake check
+        run: nix flake check --print-build-logs --show-trace
+
+  # 2. Secret scan (Project 5: gitleaks on every push). sops-encrypted files are
+  #    ciphertext, so they don't trip it.
+  gitleaks:
+    runs-on: nix
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so gitleaks can scan commits
+      - name: gitleaks
+        run: nix run nixpkgs#gitleaks -- detect --source . --no-banner --redact
+
+  # 3. Build every host's system closure (cache-backed). Catches breakage that
+  #    eval alone misses. fail-fast off so one host failing still reports the rest.
+  build-hosts:
+    needs: flake-check
+    runs-on: nix
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [cloud1, hacktop, media, mgmt, nixos-kde, playground]
+    steps:
+      - uses: actions/checkout@v4
+      - name: build ${{ matrix.host }}
+        run: |
+          nix build --print-build-logs --no-link \
+            ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel"
+
+  # --- Roadmap (Project 5) -------------------------------------------------
+  # - NixOS VM tests: add a `checks.<system>.*` test; the runner host already
+  #   advertises kvm + nixos-test (system-features), so the daemon can build it.
+  # - Auto-deploy to test boxes on merge to main (manual gate for prod hosts).

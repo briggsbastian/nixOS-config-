@@ -6,6 +6,7 @@
     ./dotfiles/jellyfin.nix
     ./dotfiles/zsh.nix
     ./dotfiles/neovim.nix
+    ./dotfiles/git.nix
     ./dotfiles/alacritty.nix
     ./dotfiles/tmux.nix
   ];

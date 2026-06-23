@@ -9,6 +9,7 @@
 {
   imports = [
     ./hardware-configuration.nix
+    ./forgejo-runner.nix
   ];
 
   # Bootloader (matches the live install: systemd-boot on the ESP).
