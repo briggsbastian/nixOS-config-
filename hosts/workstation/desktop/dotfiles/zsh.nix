@@ -13,8 +13,8 @@
       rebuild-boot-kde  = "sudo /etc/nixos/hosts/gaming/scripts/rebuild.sh boot   --flake /etc/nixos#nixos-kde";
 
       # Full upgrade flow: bump flake.lock -> build -> closure diff -> confirm -> switch.
-      upgrade           = "/etc/nixos/hosts/gaming/scripts/upgrade.sh";              # auto-detects KDE/Hypr from session
-      upgrade-kde       = "/etc/nixos/hosts/gaming/scripts/upgrade.sh kde";
+      upgrade           = "/etc/nixos/workstation/desktop/scripts/upgrade.sh";              # auto-detects KDE/Hypr from session
+      upgrade-kde       = "/etc/nixos/workstation/desktop/scripts/upgrade.sh kde";
       # Same as above but stages for next reboot instead of switching live.
       # Prefer these when the kernel is bumping.
       upgrade-boot-kde  = "/etc/nixos/hosts/gaming/scripts/upgrade.sh boot kde";

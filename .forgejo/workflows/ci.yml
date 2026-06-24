@@ -54,6 +54,31 @@ jobs:
           nix build --print-build-logs --no-link \
             ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel"
 
+  # 4. CI-gated publish to the public GitHub portfolio mirror. Runs ONLY after
+  #    the eval/scan/build gates pass, and ONLY for pushes to main — so the
+  #    public shop window can never show a red commit. This REPLACES Forgejo's
+  #    built-in unconditional push mirror (sync_on_commit), which must be
+  #    deleted from the repo's Mirror Settings or both will publish.
+  #
+  #    Prereq: add a GitHub PAT (Contents: Read/Write) as the Forgejo Actions
+  #    secret GH_MIRROR_TOKEN — repo Settings → Actions → Secrets. Do NOT name
+  #    it GITHUB_TOKEN (that name is reserved for the run's auto-issued token).
+  mirror:
+    needs: [flake-check, gitleaks, build-hosts]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: nix
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history + tags for a faithful mirror
+      - name: push to GitHub on green
+        env:
+          GH_MIRROR_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
+        run: |
+          git push --force --follow-tags \
+            "https://x-access-token:${GH_MIRROR_TOKEN}@github.com/briggsbastian/nixOS-config.git" \
+            HEAD:refs/heads/main
+
   # --- Roadmap (Project 5) -------------------------------------------------
   # - NixOS VM tests: add a `checks.<system>.*` test; the runner host already
   #   advertises kvm + nixos-test (system-features), so the daemon can build it.
