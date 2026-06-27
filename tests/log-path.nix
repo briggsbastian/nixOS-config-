@@ -83,5 +83,17 @@ pkgs.testers.runNixOSTest {
         "| grep -q ALLOY_FLOW_CANARY_42",
         timeout=120,
     )
+
+    # The query above only needs `job`, which loki.source.journal sets directly.
+    # Re-query requiring a non-empty `host` label too: that label only exists if
+    # the loki.relabel.journal pipeline (__journal__hostname -> host) actually
+    # ran, so this proves the agent's relabel config flows, not just the source.
+    machine.succeed(
+        "curl -sG http://127.0.0.1:3100/loki/api/v1/query_range "
+        '--data-urlencode \'query={job="systemd-journal", host=~".+"} |= `ALLOY_FLOW_CANARY_42`\' '
+        "--data-urlencode \"start=$(date -d '-5 min' +%s)000000000\" "
+        "--data-urlencode \"end=$(date +%s)000000000\" "
+        "| grep -q ALLOY_FLOW_CANARY_42"
+    )
   '';
 }
