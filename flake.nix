@@ -27,6 +27,11 @@
 
   outputs = inputs @ {self, home-manager, nix-flatpak, nixvim, nixpkgs, nixpkgs-stable, nixpkgs-mgmt, claude-code, colmena, sops-nix, ...}:
     let
+      # Single source of truth for host -> LAN IP, shared with mgmt's Prometheus
+      # scrape config (hosts/lan/mgmt/modules/monitoring.nix) so the deploy host
+      # list and the metrics scrape list can't drift. See fleet-hosts.nix.
+      fleetHosts = import ./fleet-hosts.nix;
+
       mkSystem = { homeFile }: nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
@@ -63,11 +68,13 @@
       # AdGuard, so resolving it here would be a DNS deadlock.
       #   mgmt (192.168.1.222) is folded in last and gated - it serves the LAN's
       #   DNS + PKI, so a bad deploy takes down the whole house (see Project 1).
+      # IPs come from fleetHosts (above) so they're defined once; zone + tags stay
+      # here as they're deploy-only (zone is also the hosts/<zone>/<name>/ subdir).
       servers = {
-        hacktop    = { zone = "lan";   targetHost = "192.168.1.26";   tags = [ "server" "lan" "staging" ]; };
-        media      = { zone = "lan";   targetHost = "192.168.1.189";  tags = [ "server" "lan" "media" ]; };
-        playground = { zone = "lan";   targetHost = "192.168.1.217";  tags = [ "server" "lan" "lab" ]; };
-        cloud1     = { zone = "cloud"; targetHost = "172.232.161.44"; tags = [ "server" "cloud" ]; };
+        hacktop    = { zone = "lan";   targetHost = fleetHosts.hacktop.ip;    tags = [ "server" "lan" "staging" ]; };
+        media      = { zone = "lan";   targetHost = fleetHosts.media.ip;      tags = [ "server" "lan" "media" ]; };
+        playground = { zone = "lan";   targetHost = fleetHosts.playground.ip; tags = [ "server" "lan" "lab" ]; };
+        cloud1     = { zone = "cloud"; targetHost = fleetHosts.cloud1.ip;     tags = [ "server" "cloud" ]; };
       };
 
       # Servers build against stable nixpkgs (nixos-25.11), matching the boxes'
@@ -102,7 +109,7 @@
       };
       mkMgmtColmenaNode = { ... }: {
         deployment = {
-          targetHost = "192.168.1.222";
+          targetHost = fleetHosts.mgmt.ip;
           targetUser = "deploy";
           tags = [ "server" "mgmt" "gated" ];
         };
