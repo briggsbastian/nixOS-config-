@@ -1,8 +1,16 @@
 # Metrics + uptime + landing page: Prometheus scrapes node_exporter,
 # Grafana visualizes, Uptime Kuma probes the services, Homepage links it
 # all together at https://mgmt.lan.
-{ ... }:
+{ lib, ... }:
 
+let
+  # Scrape targets come from the same host map flake.nix uses for Colmena
+  # (fleet-hosts.nix), so the deploy list and the metrics list can't drift.
+  # `scrape = true` hosts only; mgmt is added separately below because its own
+  # exporter binds 127.0.0.1, so it's scraped over localhost, not by IP.
+  fleetHosts = import ../../../../fleet-hosts.nix;
+  scrapedHosts = lib.filterAttrs (_: h: h.scrape) fleetHosts;
+in
 {
   services.prometheus = {
     enable = true;
@@ -14,10 +22,24 @@
       port = 9100;
       enabledCollectors = [ "systemd" ];
     };
+    # One "node" job covering the whole fleet. instance = hostname (not ip:port)
+    # keeps labels low-cardinality and makes alerts read "node media down". mgmt
+    # is scraped over localhost; everyone else by IP, derived from fleet-hosts.nix
+    # so this list never drifts from the Colmena host map. cloud1 is absent
+    # (scrape = false) until it has a private path to mgmt.
     scrapeConfigs = [
       {
         job_name = "node";
-        static_configs = [ { targets = [ "127.0.0.1:9100" ]; } ];
+        static_configs = [
+          {
+            targets = [ "127.0.0.1:9100" ];
+            labels.instance = "mgmt";
+          }
+        ]
+        ++ lib.mapAttrsToList (name: h: {
+          targets = [ "${h.ip}:9100" ];
+          labels.instance = name;
+        }) scrapedHosts;
       }
     ];
   };
