@@ -196,6 +196,19 @@ in
                 annotations:
                   summary: "TLS cert for {{ $labels.instance }} expires in under 14 days"
                   description: "{{ $labels.instance }} expires in {{ $value | humanizeDuration }} - step-ca/lego renewal may have failed."
+
+              # CertExpiringSoon is guarded by `> 0`, so a vhost that can't be
+              # reached at all (no probe_ssl_* series) is silent. This covers that:
+              # a failed TLS handshake means a down vhost or a cert nginx couldn't
+              # load. 15m absorbs an nginx reload during a deploy.
+              - alert: TlsProbeDown
+                expr: probe_success{job="blackbox-tls"} == 0
+                for: 15m
+                labels:
+                  severity: warning
+                annotations:
+                  summary: "TLS probe failing for {{ $labels.instance }}"
+                  description: "Blackbox could not complete a TLS handshake with {{ $labels.instance }} for 15m (endpoint down, or nginx could not load its cert)."
       ''
     ];
   };

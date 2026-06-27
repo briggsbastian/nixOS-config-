@@ -216,7 +216,10 @@ in
         configuration = {
           route = {
             receiver        = "ntfy";
-            group_by        = [ "alertname" "host" ];
+            # host: the label log alerts carry (sum by (host)); instance: the label
+            # the Prometheus metric + cert alerts carry. Both listed so each kind
+            # groups per box (a label absent on one kind groups as empty there).
+            group_by        = [ "alertname" "host" "instance" ];
             group_wait      = "30s";
             group_interval  = "5m";
             repeat_interval = "4h";
